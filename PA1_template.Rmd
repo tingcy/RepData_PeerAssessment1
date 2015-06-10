@@ -8,18 +8,167 @@ output:
 
 ## Loading and preprocessing the data
 
+The loading process begins with loading all the required libraries:
 
+```{r, message=FALSE}
+library(data.table)
+library(ggplot2)
+library(lubridate)
+library(lattice)
+```
+The next steps is to read the file
+```{r}
+dt<-fread("activity.csv")
+dt$date<-as.Date(dt$date,"%Y-%m-%d")
+```
+Records with/without NA
+```{r}
+dt.clean<-dt[complete.cases(dt),]    # sum(is.na(dt)) = 15264
+dt.missing<-dt[!complete.cases(dt),]  # sum(!is.na(dt)) = 2304
+```
+
+
+Get the sum each day
+```{r}
+dt.clean.sum<-dt.clean[,sum(steps),by=date]
+setnames(dt.clean.sum,"V1","sum")
+```
 
 ## What is mean total number of steps taken per day?
 
+Get the mean for clean data
+```{r}
+dt.clean.mean<-dt.clean[,mean(steps,na.rm=TRUE),by=date]
+setnames(dt.clean.mean,"V1","mean")
+dt.clean.mean
+```
 
+Get the median for clean data
+```{r}
+dt.clean.median<-dt.clean[,median(steps,na.rm=TRUE),by=date]
+setnames(dt.clean.median,"V1","median")
+dt.clean.median
+```
+
+total steps for each date
+
+```{r}
+ggplot(data=dt.clean.sum, aes(x=date, y=sum)) +
+     geom_bar(stat="identity", position="dodge", colour = "white", fill ="steelblue")+
+     labs(x="Date",y="Sum",title="Total Steps per Day")+
+     theme_bw()
+```
+
+Average steps for each date
+
+```{r}
+ggplot(data=dt.clean.mean, aes(x=date, y=mean,))+
+     geom_line(col="blue")+
+     labs(x="Date",y="Average",title="Average Steps per Day")+
+     theme_bw()
+```
 
 ## What is the average daily activity pattern?
 
+```{r}
+dt.clean.average<-dt.clean[,mean(steps),by=interval]
+setnames(dt.clean.average,"V1","Average.Steps")
+```
+```{r}
+ggplot(data=dt.clean.average, aes(x=interval, y=Average.Steps,))+
+     geom_line(col="blue")+
+     labs(x="Interval",y="Average Steps",title="Average Steps per Interval")+
+     theme_bw()
+```
 
+Get the max average steps and interval
+```{r}
+dt.clean.average[which.max(dt.clean.average$Average.Steps)]
+```
+
+Draw a vertical line at max
+```{r}
+ggplot(data=dt.clean.average, aes(x=interval, y=Average.Steps,))+
+     geom_line(col="blue")+
+     labs(x="Interval",y="Average.Steps",title="Average Steps per Interval")+ 
+     geom_vline(xintercept = 835, colour="red", linetype = "longdash")+
+     annotate("text", x = 1100, y = 8, label = "max = 835")+
+     theme_bw()
+```
 
 ## Imputing missing values
 
+Total number of NA
+```{r}
+nrow(dt.missing<-dt[!complete.cases(dt),] )
+nrow(dt[is.na(dt$steps),])
+cntTotal<-nrow(dt)
+test<-dt[,mean(steps),by=date]
+setnames(test,"V1","Means")
+test[is.na(test$Means)]<-0   
+dt.1<-copy(dt) 
+dt.1[,mean(steps,na.rm=TRUE),by=month(date)] 
+     
+for(i in 1:cntTotal){     
+     if(is.na(dt.1$steps[i])){
+          if(is.na(match(dt.1$date[i],test$date))){
+               if(month(dt.1$date[i])==10){
+                    dt.1$steps[i]<-37.45821
+               }else{dt.1$steps[i]<-37.29123}
+          }else {dt.1$steps[i]<-test[match(dt.1$date[i],test$date),Means]}          
+     }
+}
 
+dt.1.mean<-dt.1[,mean(steps),by=date]
+setnames(dt.1.mean,"V1","Means")
+dt.1.mean$type<-"no.NA"
+ 
+
+dt.mean<-dt[,mean(steps),by=date]
+setnames(dt.mean,"V1","Means")
+dt.mean$type<-"with.NA"
+
+combine.data<-rbind(dt.mean,dt.1.mean)
+```
+
+plot graph
+```{r}
+ggplot(data=combine.data, aes(x=date, y=Means, fill=as.factor(type))) +
+     geom_bar(stat="identity", position="dodge")+
+     labs(x="Date",y="Sum",title="Total Steps per Day", fill="Type")+
+     theme_bw()
+```
+plot line graph
+```{r}
+ggplot(data=combine.data, aes(x=date, y=Means, group=type, shape=type, colour=type)) +
+     geom_line(aes(linetype=type), size=1)+
+     theme_bw()
+``` 
+
+Get the median - after filling up missing value
+```{r}
+dt.1.median<-dt.1[,median(steps),by=date]
+setnames(dt.1.median,"V1","Medians")
+```
+
+Plot bar graph
+```{r}
+ggplot(data=dt.1.mean, aes(x=date, y=Means)) +
+     geom_bar(stat="identity", position="dodge", fill="blue")+
+     labs(x="Date",y="Mean",title="Average Steps per Day")
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r}
+weekdays <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+dt.1$dayType = as.factor(ifelse(is.element(weekdays(as.Date(dt.1$date)),weekdays), "Weekday", "Weekend"))
+```
+
+Plot xyplot graph
+```{r}
+steps_by_interval_i <- aggregate(steps ~ interval + dayType, dt.1, mean)
+xyplot(steps_by_interval_i$steps ~ steps_by_interval_i$interval|steps_by_interval_i$dayType, main="Average Steps per Day by Interval",xlab="Interval", ylab="Steps",layout=c(1,2), type="l")
+```
+ 
+
