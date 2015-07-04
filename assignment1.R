@@ -1,3 +1,5 @@
+#------------loading libraries and loading data------------------
+
 library(data.table)
 library(ggplot2)
 library(lubridate)
@@ -60,7 +62,6 @@ nrow(dt[is.na(dt$steps),])
 
 # calculate the mean step per month - for random sampling
 
- 
 dt.meansteps.month<-dt[,mean(steps,na.rm=TRUE),by=month(date)]
 
 dt.no.missing<-copy(dt)
