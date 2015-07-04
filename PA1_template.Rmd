@@ -4,7 +4,7 @@ output:
   html_document:
     keep_md: true
 ---
-
+prepared by: CY Ting
 
 ## Loading and preprocessing the data
 
@@ -21,154 +21,135 @@ The next steps is to read the file
 dt<-fread("activity.csv")
 dt$date<-as.Date(dt$date,"%Y-%m-%d")
 ```
-Records with/without NA
-```{r}
-dt.clean<-dt[complete.cases(dt),]    # sum(is.na(dt)) = 15264
-dt.missing<-dt[!complete.cases(dt),]  # sum(!is.na(dt)) = 2304
-```
 
-
-Get the sum each day
-```{r}
-dt.clean.sum<-dt.clean[,sum(steps),by=date]
-setnames(dt.clean.sum,"V1","sum")
-```
 
 ## What is mean total number of steps taken per day?
 
-Get the mean for clean data
+Extracting the total number of steps grouped by date
+
 ```{r}
-dt.clean.mean<-dt.clean[,mean(steps,na.rm=TRUE),by=date]
-setnames(dt.clean.mean,"V1","mean")
-dt.clean.mean
+dt.sum.date = dt[, total_steps:= sum(steps, na.rm = T),by = date]
 ```
 
-Get the median for clean data
-```{r}
-dt.clean.median<-dt.clean[,median(steps,na.rm=TRUE),by=date]
-setnames(dt.clean.median,"V1","median")
-dt.clean.median
-```
-
-total steps for each date
+Histogram showing the total number of steps taken each day
 
 ```{r}
-ggplot(data=dt.clean.sum, aes(x=date, y=sum)) +
-     geom_bar(stat="identity", position="dodge", colour = "white", fill ="steelblue")+
-     labs(x="Date",y="Sum",title="Total Steps per Day")+
+ggplot(dt.sum.date, aes(x=total_steps)) +
+     geom_histogram(colour="black", fill="green") +
+     labs(x="Total number of steps per day",y="Frequency",title="Histogram of the total number of steps per day")+
      theme_bw()
 ```
 
-Average steps for each date
+The mean and median of total steps per day
 
 ```{r}
-ggplot(data=dt.clean.mean, aes(x=date, y=mean,))+
-     geom_line(col="blue")+
-     labs(x="Date",y="Average",title="Average Steps per Day")+
-     theme_bw()
+mean(dt.sum.date$total_steps)
+median(dt.sum.date$total_steps)
 ```
 
 ## What is the average daily activity pattern?
 
+Getting the mean across each day
+
 ```{r}
-dt.clean.average<-dt.clean[,mean(steps),by=interval]
-setnames(dt.clean.average,"V1","Average.Steps")
+dt.mean.interval = dt[, mean_steps:= mean(steps, na.rm = T),by = interval]
 ```
+
+Line graph for average steps for each interval
+
 ```{r}
-ggplot(data=dt.clean.average, aes(x=interval, y=Average.Steps,))+
+ggplot(data=dt.mean.interval, aes(x=interval, y=mean_steps))+
      geom_line(col="blue")+
-     labs(x="Interval",y="Average Steps",title="Average Steps per Interval")+
+     labs(x="Interval",y="Mean Steps",title="Mean Steps per Interval")+
      theme_bw()
 ```
 
-Get the max average steps and interval
+Identifying the interval with maximum number of steps
+
 ```{r}
-dt.clean.average[which.max(dt.clean.average$Average.Steps)]
+dt.mean.interval[which.max(dt.mean.interval$mean_steps)]
 ```
 
-Draw a vertical line at max
+A vertical line at max value
+
 ```{r}
-ggplot(data=dt.clean.average, aes(x=interval, y=Average.Steps,))+
+ggplot(data=dt.mean.interval, aes(x=interval, y=mean_steps))+
      geom_line(col="blue")+
-     labs(x="Interval",y="Average.Steps",title="Average Steps per Interval")+ 
+     labs(x="Interval",y="Mean Steps",title="Mean Steps per Interval")+ 
      geom_vline(xintercept = 835, colour="red", linetype = "longdash")+
      annotate("text", x = 1100, y = 8, label = "max = 835")+
      theme_bw()
 ```
 
+
 ## Imputing missing values
 
-Total number of NA
+The strategy used in this assignment to fill up missing values is done through replacing all "NA" with mean for the month. 
+
+The first step is to identify the number of NA in the Activity dataset.
+
+```{r, comment=NA}
+cat(nrow(dt[is.na(dt$steps),]))
+```
+
+Second, calculate the mean step for each month.
+
 ```{r}
-nrow(dt.missing<-dt[!complete.cases(dt),] )
-nrow(dt[is.na(dt$steps),])
-cntTotal<-nrow(dt)
-test<-dt[,mean(steps),by=date]
-setnames(test,"V1","Means")
-test[is.na(test$Means)]<-0   
-dt.1<-copy(dt) 
-dt.1[,mean(steps,na.rm=TRUE),by=month(date)] 
-     
-for(i in 1:cntTotal){     
-     if(is.na(dt.1$steps[i])){
-          if(is.na(match(dt.1$date[i],test$date))){
-               if(month(dt.1$date[i])==10){
-                    dt.1$steps[i]<-37.45821
-               }else{dt.1$steps[i]<-37.29123}
-          }else {dt.1$steps[i]<-test[match(dt.1$date[i],test$date),Means]}          
+dt.meansteps.month<-dt[,mean(steps,na.rm=TRUE),by=month(date)]
+```
+
+Assigning NA with respective mean step of the month
+
+```{r}
+dt.no.missing<-copy(dt)
+
+set.seed(1)
+for(i in 1:nrow(dt)){     
+     if(is.na(dt.no.missing$steps[i])){
+          dt.no.missing$steps[i]<-sample(30:45,1)
      }
 }
+```
+The sum of steps per day - after removing missing values
 
-dt.1.mean<-dt.1[,mean(steps),by=date]
-setnames(dt.1.mean,"V1","Means")
-dt.1.mean$type<-"no.NA"
- 
-
-dt.mean<-dt[,mean(steps),by=date]
-setnames(dt.mean,"V1","Means")
-dt.mean$type<-"with.NA"
-
-combine.data<-rbind(dt.mean,dt.1.mean)
+```{r}
+dt.sum.date.no.missing<-dt.no.missing[, total_steps:= sum(steps), by=date]
 ```
 
-plot graph
+The mean and median of total steps per day
 ```{r}
-ggplot(data=combine.data, aes(x=date, y=Means, fill=as.factor(type))) +
-     geom_bar(stat="identity", position="dodge")+
-     labs(x="Date",y="Sum",title="Total Steps per Day", fill="Type")+
-     theme_bw()
-```
-plot line graph
-```{r}
-ggplot(data=combine.data, aes(x=date, y=Means, group=type, shape=type, colour=type)) +
-     geom_line(aes(linetype=type), size=1)+
-     theme_bw()
-``` 
-
-Get the median - after filling up missing value
-```{r}
-dt.1.median<-dt.1[,median(steps),by=date]
-setnames(dt.1.median,"V1","Medians")
+mean(dt.sum.date.no.missing$total_steps)
+median(dt.sum.date.no.missing$total_steps)
 ```
 
-Plot bar graph
-```{r}
-ggplot(data=dt.1.mean, aes(x=date, y=Means)) +
-     geom_bar(stat="identity", position="dodge", fill="blue")+
-     labs(x="Date",y="Mean",title="Average Steps per Day")
-```
+Histogram for total steps for each date after removing the missing values
 
+```{r}
+ggplot(dt.sum.date.no.missing, aes(x=total_steps)) +
+     geom_histogram(colour="black", fill="green") +
+     labs(x="Total number of steps per day",y="Frequency",title="Histogram of the total number of steps per day")+
+     geom_vline(xintercept = mean(dt.sum.date$total_steps), colour="blue", linetype = "longdash")+
+     annotate("text", x = 7000, y = 3500, label = "with NA")+
+     geom_vline(xintercept = mean(dt.sum.date.no.missing$total_steps), colour="red", linetype = "longdash")+
+     annotate("text", x = 14000, y = 3600, label = "without NA")+
+     theme_bw() 
+```     
+     
+     
 ## Are there differences in activity patterns between weekdays and weekends?
 
+First, assign names of weekday to a variable named "weekdays"
 ```{r}
 weekdays <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
-dt.1$dayType = as.factor(ifelse(is.element(weekdays(as.Date(dt.1$date)),weekdays), "Weekday", "Weekend"))
 ```
 
-Plot xyplot graph
+Check if a particular date falls under weekdays
 ```{r}
-steps_by_interval_i <- aggregate(steps ~ interval + dayType, dt.1, mean)
-xyplot(steps_by_interval_i$steps ~ steps_by_interval_i$interval|steps_by_interval_i$dayType, main="Average Steps per Day by Interval",xlab="Interval", ylab="Steps",layout=c(1,2), type="l")
+dt.no.missing$dayType = as.factor(ifelse(is.element(weekdays(as.Date(dt.no.missing$date)),weekdays), "Weekday", "Weekend"))
 ```
- 
+plotting the xyplot for comparing weekdays and weekends
+```{r}
+steps.interval <- aggregate(steps ~ interval + dayType, dt.no.missing, mean)
 
+xyplot(steps.interval$steps ~ steps.interval$interval|steps.interval$dayType, main="Average Steps per Day by Interval",xlab="Interval", ylab="Steps",layout=c(1,2), type="l")
+```
