@@ -156,6 +156,7 @@ for(i in 1:nrow(dt)){
 <pre class="r"><code>weekdays &lt;- c(&quot;Monday&quot;, &quot;Tuesday&quot;, &quot;Wednesday&quot;, &quot;Thursday&quot;, &quot;Friday&quot;)</code></pre>
 <p>Check if a particular date falls under weekdays</p>
 <pre class="r"><code>dt.no.missing$dayType = as.factor(ifelse(is.element(weekdays(as.Date(dt.no.missing$date)),weekdays), &quot;Weekday&quot;, &quot;Weekend&quot;))</code></pre>
+<p>plotting the xyplot for comparing weekdays and weekends</p>
 <pre class="r"><code>steps.interval &lt;- aggregate(steps ~ interval + dayType, dt.no.missing, mean)
 
 xyplot(steps.interval$steps ~ steps.interval$interval|steps.interval$dayType, main=&quot;Average Steps per Day by Interval&quot;,xlab=&quot;Interval&quot;, ylab=&quot;Steps&quot;,layout=c(1,2), type=&quot;l&quot;)</code></pre>
