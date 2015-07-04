@@ -195,9 +195,13 @@ weekdays <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
 
 Check if a particular date falls under weekdays
 
+
 ```r
 dt.no.missing$dayType = as.factor(ifelse(is.element(weekdays(as.Date(dt.no.missing$date)),weekdays), "Weekday", "Weekend"))
 ```
+
+plotting the xyplot for comparing weekdays and weekends
+
 
 ```r
 steps.interval <- aggregate(steps ~ interval + dayType, dt.no.missing, mean)
